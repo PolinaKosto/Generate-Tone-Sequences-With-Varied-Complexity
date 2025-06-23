@@ -1,0 +1,228 @@
+import tarfile
+import math
+import random
+import numpy as np
+from scipy.io.wavfile import write
+import librosa
+from audiostretchy.stretch import stretch_audio
+
+
+
+#to avoid the click sound
+
+def apply_fade(array, sr, duration=3.0):
+    # convert to audio indices (samples)
+    length = int(duration*sr)
+    end = array.shape[0]
+    start = end - length
+
+    # compute fade out curve
+    # linear fade
+    fade_curve = np.linspace(1.0, 0.0, length)
+
+    # apply the curve
+    array[start:end] = array[start:end] * fade_curve
+
+    #same but fade-in
+    start = 0
+    end = length
+    fade_in_curve = np.linspace(0.0, 1.0, length)
+    array[start:end] = array[start:end] * fade_in_curve
+
+#parameters: Number of notes, bpm, rhythmic variability (natural number, rather inferiour to 10), entropy of duration distribution (real number between 0 and 1), initial pitch in HZ, interval variability, entropy of pitch distribution, maximum pitch interval in cent, note density in notes per second.
+def generate_sequence(parameters):
+    n = int(parameters[0])
+    bpm = float(parameters[1])
+    rh_var = int(parameters[2])
+    entr_dur = float(parameters[3])
+    
+    init_pitch = float(parameters[4])
+    #conversion of the starting pitch into cents to then directly manipulate the octave (1200 cents) and its sub units
+    init_pitch= 1200*math.log2(init_pitch)
+    
+    int_var = int(parameters[5])
+    entr_pitch = float(parameters[6])
+    max_int = float(parameters[7])
+    note_dens = float(parameters[8])
+
+    #finding the length of one beat in seconds
+
+    beat = 60/bpm
+    
+    #finding allowed note durations in seconds
+    
+    durations = []
+    for i in range(rh_var+1):
+        d = beat/(2**i)
+        durations.append(d)
+    
+    #finding the number of points of change for rhythm
+        
+    nb_pt_ch_dur = math.ceil((n-1)*entr_dur)
+    pt_ch_dur = random.sample(range(1,n), nb_pt_ch_dur)
+    
+    rh_vect = []
+    
+    for i in range(n):
+        if i in pt_ch_dur:
+            if len(durations)>1:
+                durations.remove(rh_vect[i-1])
+                nxt_dur = random.choice(durations)
+                rh_vect.append(nxt_dur)
+                durations.append(rh_vect[i-1])
+            else:
+                rh_vect.append(durations[0])
+        elif i==0:
+            nxt_dur = random.choice(durations)
+            rh_vect.append(nxt_dur)
+        else:
+            rh_vect.append(rh_vect[i-1])
+
+    #finding allowed pitch intervals
+            
+    intervals = []
+    for i in range(int_var):
+        d = max_int/(2**i)
+        intervals.append(d)
+    
+    #finding the number of points of change for pitch intervals and the interval vector
+        
+    nb_pt_ch_int = math.ceil((n-1)*entr_pitch)
+    pt_ch_int = random.sample(range(1,n), nb_pt_ch_int)
+    
+    int_vect = []
+    for i in range(n):
+        if len(intervals)>0:
+            if i in pt_ch_int:
+                nxt_int = random.choice(intervals)
+                int_vect.append(nxt_int)
+            else:
+                int_vect.append(0)
+        else:
+            int_vect.append(0)
+
+    pitch_vect = [init_pitch]
+    
+    #the second "if" is if we don't want to go beyond human speaking range (100 to 400 Hz)
+    for i in range(1, n):
+        op = random.choice([0,1])
+        if op==0:
+            nxt_pitch = pitch_vect[i-1]+int_vect[i]
+            pitch_vect.append(nxt_pitch)
+        else:
+            nxt_pitch = pitch_vect[i-1]-int_vect[i]
+            pitch_vect.append(nxt_pitch)
+        if (pitch_vect[i]<1200*math.log2(87)):
+            pitch_vect[i] = pitch_vect[i] + 2*int_vect[i]
+        elif (pitch_vect[i]>1200*math.log2(880)):
+            pitch_vect[i] = pitch_vect[i] - 2*int_vect[i]
+    
+    
+    #conversion of pitches from cents to hertz
+    for i in range(n):
+        f = 2**(pitch_vect[i]/1200)
+        pitch_vect[i] = f
+
+
+    silence_time = 0.05
+    
+    #samples per second
+    sps = 44100
+    
+    
+    sequence = np.empty((1,))
+    for i in range(n):
+        freq_hz = pitch_vect[i]
+        duration_s = rh_vect[i]- silence_time
+        each_sample_number = np.arange(duration_s * sps)
+        tone = np.sin(2*np.pi*each_sample_number*freq_hz / sps)
+        apply_fade(tone, sps, 0.01)
+        each_sample_number_silence = np.arange(silence_time * sps)
+        silence = np.sin(0*np.pi*each_sample_number_silence*freq_hz / sps)
+        sequence = np.concatenate([sequence, tone, silence])
+    
+    silence_end = np.empty((1000,))  
+    sequence = np.concatenate([sequence, silence_end])
+    #we want to control the note density. Let "length" be the desired length of generated sound sequences. 
+    length = n/note_dens
+    our_length = librosa.get_duration(y = sequence*32767, sr = 44100)
+
+    factor = length/our_length
+
+    sequence_integers = np.int16(sequence*32767)
+    return sequence_integers, factor
+
+#to make it produce a sequence, do:
+'''
+sequence_integers, factor = generate_sequence(parameters)
+sps = 44100  #or other
+write('Sequence.wav', sps, sequence_integers)
+stretch_audio('Sequence.wav', 'Final_sequence_name.wav', ratio= factor)
+
+'''
+Randomizing parameters. If you want to customize the range in which a certain parameter is randomized, as an input to the function write name_parameter = [min value, max value]. The name for every parameter is written in parentheses next to it.
+
+By default:
+
+bpm 120 (bpm)
+
+number of notes 10 (note)
+
+initial pitch random integer from [100,400] (init_pitch)
+
+rhythmic variability and interval variability random integer from [0,4] (rh_var, int_var)
+
+entropy of duration distribution and entropy of pitch distribution floats in (0.0, 1.0) (entr_dur, entr_pitch)
+
+maximum pitch interval integer in [200,1200] (max_int)
+
+return [note, bpm, rh_var, entr_dur, init_pitch , int_var, entr_pitch, max_int , note_dens]
+'''
+
+def randomize(bpm = False, note = False, init_pitch = "human", rh_var = False, entr_dur = False, int_var = False, entr_pitch = False, max_int = False, note_dens = False):
+    if bpm ==False :
+        bpm = 60
+    else:
+        bpm = random.randint(bpm[0], bpm[1])
+        
+    if note==False:
+        note = 10
+    else:
+        note = random.randint(note[0], note[1])
+
+    if init_pitch == "human":
+        init_pitch = random.randint(100, 400)
+    else:
+        init_pitch = random.randint(init_pitch[0], init_pitch[1])
+
+    if entr_dur ==False:
+        entr_dur = random.uniform(0.0, 1.0)
+    else:
+        entr_dur = random.uniform(entr_dur[0], entr_dur[1])
+
+    if entr_pitch ==False:
+        entr_pitch = random.uniform(0.0, 1.0)
+    else:
+        entr_pitch = random.uniform(entr_pitch[0], entr_pitch[1])
+
+    if max_int ==False:
+        max_int = random.randint(200, 1200)
+    else:
+        max_int = random.randint(max_int[0], max_int[1])
+
+    if rh_var ==False:
+        rh_var = random.randint(0, 4)
+    else:
+        rh_var = random.randint(rh_var[0], rh_var[1])
+        
+    if int_var ==False:
+        int_var = random.randint(0, 4)
+    else:
+        int_var = random.randint(int_var[0], int_var[1])
+
+    if note_dens ==False:
+        note_dens = random.uniform(2, 8)
+    else:
+        note_dens = random.uniform(note_dens[0], note_dens[1])
+        
+    return [note, bpm, rh_var, entr_dur, init_pitch , int_var, entr_pitch, max_int, note_dens ]
