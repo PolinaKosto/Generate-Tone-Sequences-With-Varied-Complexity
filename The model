@@ -158,7 +158,7 @@ sequence_integers, factor = generate_sequence(parameters)
 sps = 44100  #or other
 write('Sequence.wav', sps, sequence_integers)
 stretch_audio('Sequence.wav', 'Final_sequence_name.wav', ratio= factor)
-
+'''
 '''
 Randomizing parameters. If you want to customize the range in which a certain parameter is randomized, as an input to the function write name_parameter = [min value, max value]. The name for every parameter is written in parentheses next to it.
 
@@ -226,3 +226,60 @@ def randomize(bpm = False, note = False, init_pitch = "human", rh_var = False, e
         note_dens = random.uniform(note_dens[0], note_dens[1])
         
     return [note, bpm, rh_var, entr_dur, init_pitch , int_var, entr_pitch, max_int, note_dens ]
+    
+    
+#Our goal now is to produce the desired random sets of parameters. The following function will automatize the process following the protocol: https://docs.google.com/document/d/1HdF7nSFbQGlPtVJieEO3igX9ixAn2NnfcT84V3xbOqM/edit?tab=t.0
+
+def exp():
+    #I will first generate the needed combos with [pitch interval variability, entropy of pitch interval distribution, maximum pitch interval] and then include them into randomly generated parameter sets.
+    tonal_comb = [[0, 0, 200]]
+    for int_var in range(1,5):
+        for entr_pitch in np.linspace(0.25, 1, 4):
+            for max_int in range(200, 1205, 333):
+                tonal_comb.append([int_var, entr_pitch.item(), max_int])
+    
+    parameter_sets = []
+    for tonal_param in tonal_comb:
+        parameter_sets.append(randomize(int_var = [tonal_param[0], tonal_param[0]], entr_pitch = [tonal_param[1], tonal_param[1]], max_int = [tonal_param[2], tonal_param[2]]))
+    
+    rh_comb = [[0, 0]]
+    for rh_var in range(1, 4):
+        for entr_dur in np.linspace(0.125, 1, 8):
+            rh_comb.append([rh_var, entr_dur.item()])
+            
+    #now we need to insert combinations of rhythmic parameters in the generated parameted sets randomly so that there is no tendency of rhythmic and tonal complexities increasing together. 
+    
+    where_insert_rh_para = random.sample(range(65), 50)
+    rh_comb *= 2
+    for p, i in enumerate(where_insert_rh_para):
+        parameter_sets[i][2] = rh_comb[p][0]
+        parameter_sets[i][3] = rh_comb[p][1]
+    
+    note_dens_vals = []
+    for i in np.linspace(2, 8, 10):
+        note_dens_vals.append(i.item())
+    
+    note_dens_vals *= 3
+    
+    where_insert_note_dens = random.sample(range(65), 30)
+    for p, i in enumerate(where_insert_note_dens):
+        parameter_sets[i][8] = note_dens_vals[p]
+        
+    #as we want to focus on six parameters only, I also want a list of parameter sets shortened to [rh_var, entr_dur, int_var, entr_pitch, max_int, note_dens ]
+    parameter_sets_short = []
+    for set in parameter_sets:
+        parameter_sets_short.append([set[2], set[3], set[5], set[6], set[7], set[8]])
+        
+    for i in range(65):
+        sequence_integers, factor = generate_sequence(parameter_sets[i])
+        sps = 44100 
+        write('Sequence.wav', sps, sequence_integers)
+        
+        #CHANGE THE PATH IN THIS LINE TO WHERE YOU WANT YOUR SEQUENCES
+        
+        stretch_audio('Sequence.wav', f'C:/Users/polli/Documents/CPES Cours/L2/Cognitive sciences/Stage/Sequences/for_the_experiment/Sequence number {i} ({parameter_sets_short[i]}).wav', ratio = factor)
+
+    return parameter_sets, parameter_sets_short
+
+parameter_sets, parameter_sets_short = exp()
+
