@@ -271,8 +271,11 @@ def exp():
     parameter_sets_short = []
     for set in parameter_sets:
         parameter_sets_short.append([set[2], set[3], set[5], set[6], set[7], set[8]])
-        
-    for i in range(65):
+            
+    parameter_sets*=5
+    parameter_sets_short*=5
+    
+    for i in range(325):
         sequence_integers, factor = generate_sequence(parameter_sets[i])
         sps = 44100 
         write('Sequence.wav', sps, sequence_integers)
@@ -281,6 +284,7 @@ def exp():
         
         stretch_audio('Sequence.wav', f'C:/Users/polli/Documents/CPES Cours/L2/Cognitive sciences/Stage/Sequences/for_the_experiment/Sequence number {i} ({parameter_sets_short[i]}).wav', ratio = factor)
 
+    
     return parameter_sets, parameter_sets_short
 
 parameter_sets, parameter_sets_short = exp()
