@@ -6,6 +6,7 @@ from scipy.io.wavfile import write
 import librosa
 from audiostretchy.stretch import stretch_audio
 import csv
+import openpyxl
 
 
 
@@ -275,6 +276,10 @@ def exp():
     parameter_sets*=5
     parameter_sets_short*=5
     
+    sound_names = openpyxl.Workbook()
+    sheet = sound_names.active
+    sheet.append(['Names_sequences'])
+    
     for i in range(325):
         sequence_integers, factor = generate_sequence(parameter_sets[i])
         sps = 44100 
@@ -282,8 +287,10 @@ def exp():
         
         #CHANGE THE PATH IN THIS LINE TO WHERE YOU WANT YOUR SEQUENCES
         
-        stretch_audio('Sequence.wav', f'C:/Users/polli/Documents/CPES Cours/L2/Cognitive sciences/Stage/Sequences/for_the_experiment/Sequence number {i} ({parameter_sets_short[i]}).wav', ratio = factor)
+        stretch_audio('Sequence.wav', f'/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/for_the_experiment/Sequence_number_{i}.wav', ratio = factor)
+        sheet.append([f'/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/for_the_experiment/Sequence_number_{i}.wav'])
 
+    sound_names.save("/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/Excel_sheet_with_sequence_names.xlsx")
     
     return parameter_sets, parameter_sets_short
 
@@ -291,11 +298,11 @@ parameter_sets, parameter_sets_short = exp()
 
 #Don't forget to change the path for the files to what suits you best. I remind that in "parameters_full" the order within a set of parameters is [rhythmic variability, entropy of duration distribution, pitch interval variability, entropy of pitch interval distribution, maximum pitch interval, note density]
 
-with open("C:/Users/polli/Documents/CPES Cours/L2/Cognitive sciences/Stage/Sequences/parameters_full", "w") as full_para:
+with open("/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/parameters_full", "w") as full_para:
     wr = csv.writer(full_para)
     wr.writerows(parameter_sets)
     
-with open("C:/Users/polli/Documents/CPES Cours/L2/Cognitive sciences/Stage/Sequences/parameters_useful", "w") as useful_para:
+with open("/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/parameters_useful", "w") as useful_para:
     wr = csv.writer(useful_para)
     wr.writerows(parameter_sets_short)
 
