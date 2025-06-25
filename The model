@@ -5,6 +5,7 @@ import numpy as np
 from scipy.io.wavfile import write
 import librosa
 from audiostretchy.stretch import stretch_audio
+import csv
 
 
 
@@ -282,4 +283,16 @@ def exp():
     return parameter_sets, parameter_sets_short
 
 parameter_sets, parameter_sets_short = exp()
+
+#Don't forget to change the path for the files to what suits you best. I remind that in "parameters_full" the order within a set of parameters is [rhythmic variability, entropy of duration distribution, pitch interval variability, entropy of pitch interval distribution, maximum pitch interval, note density]
+
+with open("C:/Users/polli/Documents/CPES Cours/L2/Cognitive sciences/Stage/Sequences/parameters_full", "w") as full_para:
+    wr = csv.writer(full_para)
+    wr.writerows(parameter_sets)
+    
+with open("C:/Users/polli/Documents/CPES Cours/L2/Cognitive sciences/Stage/Sequences/parameters_useful", "w") as useful_para:
+    wr = csv.writer(useful_para)
+    wr.writerows(parameter_sets_short)
+
+
 
