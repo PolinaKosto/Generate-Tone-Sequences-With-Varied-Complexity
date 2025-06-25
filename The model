@@ -92,15 +92,16 @@ def generate_sequence(parameters):
     pt_ch_int = random.sample(range(1,n), nb_pt_ch_int)
     
     int_vect = []
-    for i in range(n):
-        if len(intervals)>0:
-            if i in pt_ch_int:
-                nxt_int = random.choice(intervals)
-                int_vect.append(nxt_int)
+    while (int_vect == []) or ((max_int not in int_vect) and (int_vect != [0]*(n))):
+        for i in range(n):
+            if len(intervals)>0:
+                if i in pt_ch_int:
+                    nxt_int = random.choice(intervals)
+                    int_vect.append(nxt_int)
+                else:
+                    int_vect.append(0)
             else:
                 int_vect.append(0)
-        else:
-            int_vect.append(0)
 
     pitch_vect = [init_pitch]
     
