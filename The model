@@ -7,7 +7,8 @@ import librosa
 from audiostretchy.stretch import stretch_audio
 import csv
 import openpyxl
-
+import pyloudnorm as pyln
+import soundfile as sf
 
 
 #to avoid the click sound
@@ -268,13 +269,9 @@ def exp():
     for p, i in enumerate(where_insert_note_dens):
         parameter_sets[i][8] = note_dens_vals[p]
         
-    #as we want to focus on six parameters only, I also want a list of parameter sets shortened to [rh_var, entr_dur, int_var, entr_pitch, max_int, note_dens ]
-    parameter_sets_short = []
-    for set in parameter_sets:
-        parameter_sets_short.append([set[2], set[3], set[5], set[6], set[7], set[8]])
+    
             
     parameter_sets*=5
-    parameter_sets_short*=5
     
     sound_names = openpyxl.Workbook()
     sheet = sound_names.active
@@ -290,8 +287,29 @@ def exp():
         stretch_audio('Sequence.wav', f'/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/for_the_experiment/Sequence_number_{i}.wav', ratio = factor)
         sheet.append([f'/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/for_the_experiment/Sequence_number_{i}.wav'])
 
-    sound_names.save("/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/Excel_sheet_with_sequence_names.xlsx")
     
+    
+    for i in range(25):
+         parameter_sets.append( randomize(rh_var = [0,0], int_var = [0,0], note_dens = [4,6]))
+         
+    for i in range(325, 350):
+        sequence_integers, factor = generate_sequence(parameter_sets[i])
+        sps = 44100 
+        write('Sequence.wav', sps, sequence_integers)
+        
+        #CHANGE THE PATH IN THIS LINE TO WHERE YOU WANT YOUR SEQUENCES
+        
+        stretch_audio('Sequence.wav', f'/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/for_the_experiment/Sequence_number_{i}_CATCH_TRIAL.wav', ratio = factor)
+        sheet.append([f'/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/for_the_experiment/Sequence_number_{i}_CATCH_TRIAL.wav'])
+    
+        
+    #as we want to focus on six parameters only, I also want a list of parameter sets shortened to [rh_var, entr_dur, int_var, entr_pitch, max_int, note_dens ]
+    parameter_sets_short = []
+    for set in parameter_sets:
+        parameter_sets_short.append([set[2], set[3], set[5], set[6], set[7], set[8]])
+        
+    sound_names.save("/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/Excel_sheet_with_sequence_names.xlsx")
+        
     return parameter_sets, parameter_sets_short
 
 parameter_sets, parameter_sets_short = exp()
@@ -305,6 +323,7 @@ with open("/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequenc
 with open("/Users/polli/Documents/CPES_Cours/L2/Cognitive_sciences/Stage/Sequences/parameters_useful", "w") as useful_para:
     wr = csv.writer(useful_para)
     wr.writerows(parameter_sets_short)
+    
 
 
 
